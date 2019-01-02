@@ -4,12 +4,19 @@
 
 import datetime
 import glob
-from posix import remove
 from threading import Thread
 import threading
 import time
 
 import requests, shutil, os.path
+
+
+'''
+Serviço de monitoramento de diretório para processar arquivos de textos
+    diretorio monitorado = files/
+    diretorio backup = backup/
+    diretorio repositorio = repo/
+'''
 
 
 '''
@@ -73,6 +80,8 @@ def convert_time(str_time):
 url = 'https://api.play/cut' #url exemplo sem funcionalidade
 repo = 'repo/repo.txt'
 backup = 'backup/'
+targets = 'files/*.txt'
+dirs = ['repo', 'backup','files']
  
 start_time = ""
 end_time = ""
@@ -81,11 +90,6 @@ duration_time = ""
 reconcile_key = ""
 time_base = convert_time("00:00:30")
 
-'''
-#*******************************
-#    MONITORANDO O DIRETORIO
-#*******************************
-'''
 class Status_Service(threading.Thread):
     def __init__(self, url, intervalo_tempo):
         self.url = url
@@ -103,7 +107,13 @@ class Status_Service(threading.Thread):
                 self.status = 'Completed'
             else:
                 self.status = 'Not Completed'
-    
+
+
+'''
+#*******************************
+#    MONITORANDO O DIRETORIO
+#*******************************
+'''
 class Monitor(threading.Thread):
     
     def __init__(self, path):
@@ -116,9 +126,16 @@ class Monitor(threading.Thread):
     def run(self):
         threading.Thread.run(self)
         print('Serviço ativo!')
+        
+        '''Verifica a existencia dos diretorios'''
+        for d in dirs:
+            if os.path.exists(d) == False:
+                os.mkdir(d)
+                
+        
         while True:
             for file in sorted(glob.iglob(self.path)):
-    #         for file in sorted(glob.iglob("files/*.txt")):
+    #         for file in sorted(glob.iglob("targets/*.txt")):
                 file_repo = open(repo, 'a')
                 file_name = file.split("/")[1]
                 
@@ -135,7 +152,7 @@ class Monitor(threading.Thread):
                 if not os.path.isfile(backup + file_name):
                     shutil.move(file, backup)
                 else:
-                    remove(file)
+                    os.remove(file)
                     print(' ->Erro: Arquivo ja existe no diretório de destino')
                     continue
                 
@@ -173,6 +190,6 @@ class Monitor(threading.Thread):
     
     
 if __name__ == '__main__':
-        monitor = Monitor('files/*.txt')
+        monitor = Monitor(targets)
         monitor.start()
     
